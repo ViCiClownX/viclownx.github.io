@@ -1,0 +1,143 @@
+<script>
+let questions = JSON.parse(localStorage.getItem("questions")) || [
+  { question: "ViCi_ClownX tên thật là gì?", options: ["Giang", "Hương", "An", "Linh"], correct: 0 }
+];
+let current = 0, score = 0, playerName = "";
+
+// 🕒 Kiểm tra xem leaderboard có quá 7 ngày không
+const lastClear = localStorage.getItem("leaderboardLastClear");
+if (!lastClear || (Date.now() - parseInt(lastClear)) > 7 * 24 * 60 * 60 * 1000) {
+  localStorage.removeItem("leaderboard");
+  localStorage.setItem("leaderboardLastClear", Date.now().toString());
+}
+
+function startQuiz() {
+  playerName = document.getElementById("player-name").value.trim();
+  if (!playerName) return alert("Nhập tên trước đã nha!");
+
+  if (playerName === "ViCi_ClownX") {
+    document.getElementById("start-screen").style.display = "none";
+    document.getElementById("edit-section").style.display = "block";
+    document.getElementById("leaderboard").style.display = "block";
+
+    // Thêm nút xóa bảng xếp hạng cho admin
+    if (!document.getElementById("clear-board-btn")) {
+      const clearBtn = document.createElement("button");
+      clearBtn.id = "clear-board-btn";
+      clearBtn.textContent = "🧹 Xóa bảng xếp hạng";
+      clearBtn.onclick = clearLeaderboard;
+      document.getElementById("leaderboard").appendChild(clearBtn);
+    }
+
+    alert("✨ Đã mở chế độ chỉnh sửa cho ViCi_ClownX 🩷");
+    renderLeaderboard();
+    return;
+  }
+
+  document.getElementById("start-screen").style.display = "none";
+  document.getElementById("quiz-container").style.display = "block";
+  showQuestion();
+}
+
+function showQuestion() {
+  const q = questions[current];
+  if (!q) { endQuiz(); return; }
+  document.getElementById("question").textContent = q.question;
+  const opts = document.getElementById("options");
+  opts.innerHTML = "";
+  q.options.forEach((opt, i) => {
+    const btn = document.createElement("div");
+    btn.className = "option";
+    btn.textContent = `${String.fromCharCode(65+i)}: ${opt}`;
+    btn.onclick = () => checkAnswer(i);
+    opts.appendChild(btn);
+  });
+}
+
+function checkAnswer(i) {
+  const q = questions[current];
+  if (i === q.correct) { score++; alert("Chính xác 🩷🐮!"); }
+  else { alert("Sai mất rồi 😅"); }
+  current++;
+  current < questions.length ? showQuestion() : endQuiz();
+}
+
+function endQuiz() {
+  document.getElementById("quiz-container").style.display = "none";
+  document.getElementById("leaderboard").style.display = "block";
+  const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  leaderboard.push({ name: playerName, score });
+  leaderboard.sort((a,b) => b.score - a.score);
+  localStorage.setItem("leaderboard", JSON.stringify(leaderboard));
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  const list = document.getElementById("leaderboard-list");
+  const leaderboard = JSON.parse(localStorage.getItem("leaderboard") || "[]");
+  list.innerHTML = leaderboard.length
+    ? leaderboard.map(p => `<li>${p.name} - ${p.score} điểm</li>`).join("")
+    : "<li>Chưa có ai trong bảng xếp hạng 🥺</li>";
+}
+
+function resetQuiz() {
+  current = 0; score = 0;
+  document.getElementById("leaderboard").style.display = "none";
+  document.getElementById("start-screen").style.display = "block";
+  document.getElementById("player-name").value = "";
+}
+
+function clearLeaderboard() {
+  if (confirm("Bạn chắc muốn xóa toàn bộ bảng xếp hạng không?")) {
+    localStorage.removeItem("leaderboard");
+    localStorage.setItem("leaderboardLastClear", Date.now().toString());
+    renderLeaderboard();
+    alert("✅ Đã xóa bảng xếp hạng!");
+  }
+}
+
+// --- Các chức năng chỉnh sửa câu hỏi ---
+function addQuestion() {
+  const newQ = document.getElementById("new-question").value.trim();
+  const a = document.getElementById("optA").value.trim();
+  const b = document.getElementById("optB").value.trim();
+  const c = document.getElementById("optC").value.trim();
+  const d = document.getElementById("optD").value.trim();
+  const correct = parseInt(document.getElementById("correct-answer").value);
+  if (!newQ || !a || !b || !c || !d) return alert("Điền đầy đủ câu hỏi và đáp án nha 🩷");
+
+  questions.push({ question: newQ, options: [a,b,c,d], correct });
+  localStorage.setItem("questions", JSON.stringify(questions));
+  document.getElementById("edit-msg").textContent = "✅ Đã thêm câu hỏi mới!";
+  document.querySelectorAll('#edit-section input').forEach(i => i.value = "");
+  renderQuestionList();
+}
+
+function clearQuestions() {
+  if (confirm("Bạn chắc muốn xóa hết câu hỏi không?")) {
+    questions = [];
+    localStorage.removeItem("questions");
+    document.getElementById("edit-msg").textContent = "🗑 Đã xóa tất cả câu hỏi!";
+    renderQuestionList();
+  }
+}
+
+function toggleQuestionList() {
+  const box = document.getElementById("question-list");
+  box.style.display = box.style.display === "none" ? "block" : "none";
+  renderQuestionList();
+}
+
+function renderQuestionList() {
+  const box = document.getElementById("question-list");
+  if (!questions.length) {
+    box.innerHTML = "<p>Chưa có câu hỏi nào cả 🥺</p>";
+    return;
+  }
+  box.innerHTML = questions.map((q,i)=>`
+    <p><b>${i+1}.</b> ${q.question}<br>
+    ➤ A: ${q.options[0]} | B: ${q.options[1]} | C: ${q.options[2]} | D: ${q.options[3]}<br>
+    ✅ Đáp án đúng: ${["A","B","C","D"][q.correct]}</p>
+  `).join("<hr>");
+}
+</script>
